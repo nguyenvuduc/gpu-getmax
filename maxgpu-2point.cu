@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
     size = atol(argv[1]);
 
     //calculates number of blocks
-    unsigned int NUM_BLOCKS = size/THREADS_PER_BLOCK;
+    unsigned int NUM_BLOCKS = (size + THREADS_PER_BLOCK - 1)/THREADS_PER_BLOCK;
 
     numbers = (unsigned int *)malloc(size * sizeof(unsigned int));
     if( !numbers )
@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
         printf("element in %d: %u\n", i, numbers[i]);
       }
     }
-     printf("The max integer in the array is: %d\n", numbers[0]);
+     printf("The max integer in the array found by the GPU is: %d\n", numbers[0]);
     //free device matrices
     cudaFree(d_numbers);
     free(numbers);
@@ -67,18 +67,21 @@ __global__ void get_max(unsigned int* num, unsigned int size){
   unsigned int nTotalThreads = size;
 
   while(nTotalThreads > 1){
-    unsigned int halfPoint = nTotalThreads / 2;	// divide by two
+    unsigned int halfPoint = (nTotalThreads + 1) / 2;	// divide by two
     // only the first half of the threads will be active.
     if (index < halfPoint){
-      temp = num[ index + halfPoint ];
-      if (temp > num[ index ]) {
-        num[index] = temp;
+      if (index + halfPoint < size)
+      {
+        temp = num[ index + halfPoint ];
+        if (temp > num[ index ]) {
+          num[index] = temp;
+        }
       }
     }
     __syncthreads();
 
 
-    nTotalThreads = nTotalThreads / 2;	// divide by two.
+    nTotalThreads = (nTotalThreads + 1) / 2;	// divide by two.
   }
 }
 

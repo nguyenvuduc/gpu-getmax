@@ -42,10 +42,11 @@ int main(int argc, char *argv[])
     unsigned int sizea = size;
     while(sizea > 1){
       getmaxcu<<<NUM_BLOCKS, THREADS_PER_BLOCK>>>(d_numbers, sizea);
-      sizea = (sizea) / 10;
+      sizea = (sizea + 9) / 10;
     }
     cudaMemcpy(numbers, d_numbers, size * sizeof(unsigned int), cudaMemcpyDeviceToHost);
-     printf("The max integer in the array is: %d\n", numbers[0]);
+     printf("The max integer in the array found by the GPU is: %d\n", numbers[0]);
+     printf("While the max integer in the array found by the CPU is: %d\n", getmax(numbers, size));
     //free device matrices
     cudaFree(d_numbers);
     free(numbers);
@@ -57,13 +58,26 @@ __global__ void getmaxcu(unsigned int* num, unsigned int size){
   unsigned int index = threadIdx.x + (blockDim.x * blockIdx.x);
   unsigned int nTotalThreads = size;
   unsigned int i;
-    unsigned int tenPoint = nTotalThreads / 10;	// divide by ten
+    unsigned int tenPoint = (nTotalThreads + 9) / 10;	// divide by ten
     if(index < tenPoint){
-      for(i = 1; i < 10; i++){
-        temp = num[index + tenPoint*i];
-        //compare to "0" index
-        if(temp > num[index]){
-          num[index] = temp;
+      if (index + tenPoint * 9 >= size)
+      {
+        for(i = 1; i < 9; i++){
+          temp = num[index + tenPoint*i];
+          //compare to "0" index
+          if(temp > num[index]){
+            num[index] = temp;
+          }
+        }
+      }
+      else
+      {
+        for(i = 1; i < 10; i++){
+          temp = num[index + tenPoint*i];
+          //compare to "0" index
+          if(temp > num[index]){
+            num[index] = temp;
+          }
         }
       }
     }
